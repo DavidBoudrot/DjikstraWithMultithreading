@@ -23,88 +23,47 @@ def create_packages():
     truck1 = []
     truck2 = []
     truck3 = []
-    trucks = [truck1, truck2, truck3]
+    truck1Reload = []
+    trucks = [truck1, truck2, truck3, truck1Reload]
     removed = []
     i = -1
+
     for package in packages:
-
-        if package.package_id == "15":
-            trucks[0].append(package)
-            continue
-
-        elif package.package_id == "19":
-            trucks[0].append(package)
-
-        elif package.special_notes:
-            continue
+        # Truck 1 leaving at 8:00
+        if package.package_id == '13': # This package has to be with 13 15 14 and 19
+            truck1.append(package)
+        elif package.package_id == '14': # This package has to be with 13 15 14 and 19
+            truck1.append(package)
+        elif package.package_id == '15': # This package has to be with 13 15 14 and 19
+            truck1.append(package)
+        elif package.package_id == '19': # This package has to be with 13 15 14 and 19
+            truck1.append(package)
+        #Truck 2 leaving at 9:05
+        elif package.package_id == '28': #This package arrives at the hub at 9:05
+            truck2.append(package)
+        elif package.package_id == '32': #This package arrives at the hub at 9:05
+            truck2.append(package)
+        elif package.package_id == '6': #This package arrives at the hub at 9:05
+            truck2.append(package)
+        elif package.package_id == '25': #This package arrives at the hub at 9:05
+            truck2.append(package)
+        elif package.package_id == '30': #This package arrives at the hub at 9:05
+            truck2.append(package)
+        elif package.package_id == '3': #This package has to be on truck 2
+            truck2.append(package)
+        elif package.package_id == '18': #This package has to be on truck 2
+            truck2.append(package)
+        elif package.package_id == '36': #This package has to be on truck 2
+            truck2.append(package)
+        elif package.package_id == '38': #This package has to be on truck 2
+            truck2.append(package)
+        elif package.deadline != 'EOD':
+            truck2.append(package)
         else:
-            if i < 2:
-                i += 1
-
-
-
+            if int(package.package_id) % 2 == 0:
+                truck1Reload.append(package)
             else:
-                i = 0
-            trucks[i].append(package)
-            removed.append(package)
-
-    for package in removed:
-        packages.remove(package)
-    # That divided the packages into 3 trucks evenly
-    # Now the packages with special notes need to be added to the trucks manually
-    #This was my original plan but I later realized that some packages had to be delivered with other packages and sometimes said packages did not have special notes.
-    # I added filters in the initial loop to remove the packages that had to be delivered with other packages but did not actually have notes.
-
-
-
-    #package 1
-    trucks[1].append(packages[0])
-    packages.pop(0)
-
-    #package 2
-    trucks[2].append(packages[0])
-    packages.pop(0)
-
-    #package 3
-    trucks[2].append(packages[0])
-    packages.pop(0)
-
-    #package 4
-    trucks[0].append(packages[0])
-    packages.pop(0)
-
-    #package 5
-    trucks[0].append(packages[0])
-    packages.pop(0)
-
-    #package 6
-    trucks[0].append(packages[0])
-    packages.pop(0)
-
-    #package 7
-    trucks[1].append(packages[0])
-    packages.pop(0)
-
-    #package 8
-    trucks[2].append(packages[0])
-    packages.pop(0)
-
-    #package 9
-    trucks[0].append(packages[0])
-    packages.pop(0)
-
-    #package 10
-    trucks[2].append(packages[0])
-    packages.pop(0)
-
-    #package 11
-    trucks[1].append(packages[0])
-    packages.pop(0)
-
-    #package 12
-
-    trucks[1].append(packages[0])
-    packages.pop(0)
+                truck3.append(package)
 
 
 
@@ -122,7 +81,7 @@ def create_packages():
     truck2Obj = Truck.Truck(2, packagesForTruck2)
     packagesForTruck3 = Djikstra.Djikstra(trucks[2])
     truck3Obj = Truck.Truck(3, packagesForTruck3)
-
+    truck1ReloadObj = Truck.Truck(1, trucks[3])
 
 
 
@@ -131,7 +90,7 @@ def create_packages():
 
 
 
-    truckObjects = [truck1Obj, truck2Obj, truck3Obj]
+    truckObjects = [truck1Obj, truck2Obj, truck3Obj, truck1ReloadObj]
 
     #Now I need to instantiate the simulation object and run the simulation
     sim = Simulation(truckObjects, all_packages)
