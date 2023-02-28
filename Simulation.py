@@ -12,6 +12,7 @@ class Simulation:
     thread1 = None
     thread2 = None
     thread3 = None
+    thread4 = None
     reloaded = False
     i = 0
     def __init__(self, trucks, all_packages):
@@ -51,9 +52,9 @@ class Simulation:
         if not self.reloaded:
             print("Truck 1 has run out of packages. Reloading...")
             self.reload_truck(self.trucks[0])
-            self.thread1 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
-            self.thread1.start()
-            self.thread1.join()
+            self.thread4 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
+            self.thread4.start()
+            self.thread4.join()
 
         # Start a new thread for truck 3 if truck 1 is finished
         print("Truck 1 has finished delivering all packages. Starting truck 3...")
@@ -90,9 +91,6 @@ class Simulation:
                     if index + 1 < len(packages):
                         next_package = packages[index + 1]
                         truck = self.increment_time(package, next_package, truck)
-                    elif truck.truck_id == 1 and not self.reloaded:
-                        # Truck 1 is out of packages
-                        self.reload_truck(truck)
                     else:
                         # No more packages to deliver
                         print(f"That's it for truck {truckID}\nPackages delivered: {str(self.packsdelivered)}")
