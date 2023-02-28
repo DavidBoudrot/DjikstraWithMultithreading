@@ -2,6 +2,9 @@
 import time as t
 
 import threading
+from datetime import timedelta, datetime, time
+
+
 class Simulation:
     all_packages = []
     totalmiles = 0
@@ -11,6 +14,7 @@ class Simulation:
     thread1 = None
     thread2 = None
     thread3 = None
+    reloaded = False
     def __init__(self, trucks, all_packages):
         self.trucks = trucks
         self.totalmiles = 0
@@ -19,38 +23,51 @@ class Simulation:
     #I will need to loop through each each package in each truck
     import multiprocessing
     def run_simulation(self):
+        # Create a lock for synchronizing thread access
+        truck1 = self.trucks[0].current_packages
+        for package in truck1.get_path():
+            print(package.package_id)
+        truck2 = self.trucks[1].current_packages
+        for package in truck2.get_path():
+            print(package.package_id)
+        truck3 = self.trucks[2].current_packages
+        for package in truck3.get_path():
+            print(package.package_id)
+        truck4 = self.trucks[3].current_packages
+        for package in truck4.get_path():
+            print(package.package_id)
+
         input("Press Enter to start the simulation")
         truck1 = self.trucks[0].current_packages
         truck2 = self.trucks[1].current_packages
         self.trucks[1].time = "9:05"
         truck3 = self.trucks[2].current_packages
-        # So this just leaves us with one problem.
-        # If we just run the simulation on two different threads like this, the order we deliver the packages will not make sense.
-        # Truck1 might deliver a package at 9:00 and then truck2 could deliver a package at 8:30 right after.
-        # This is not how the simulation should be, that is not how the real world works.
-        # I made it so the truck package stores the time of its last delivery.
-        # If the truck on the other thread is ahead of the current thread, it will wait until caught up.
-        # This allows me to have threads running at the same time but still deliver the packages in the correct order.
-        self.thread1 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1"))
-        self.thread2 = threading.Thread(target=self.deliver_packages, args=(self.trucks[1], "2"))
+        lock = threading.Lock()
+        # Start the delivery threads
+        self.thread1 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
+        self.thread2 = threading.Thread(target=self.deliver_packages, args=(self.trucks[1], "2", lock))
         self.thread1.start()
         self.thread2.start()
+
+        # Wait for the threads to finish
         self.thread1.join()
         self.thread2.join()
 
-       #if thread 1 is still running, thread 3 will start when thread 1 is done
+        # Start the third delivery thread if necessary
         while self.thread1.is_alive() and self.thread2.is_alive():
             continue
 
-        #at this point a thread has died, so we need to check which one
         if self.thread1.is_alive():
+            print("thread 2 died")
             self.trucks[2].time = self.trucks[1].time
-            self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3"))
+            self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
         else:
+            print("thread 1 died")
             self.trucks[2].time = self.trucks[0].time
-            self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3"))
+            self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
         self.thread3.start()
         self.thread3.join()
+        print("Simulation complete")
 
     #Once one of the threads is done I can start the next one
     # I'm going to use the threading module to run the simulation on two different threads
@@ -59,144 +76,64 @@ class Simulation:
 
     # Okay so here is the deliver_packages method that will run on two different threads.
     # It will deliver the packages for truck 1 and truck 2.
-    def deliver_packages(self, truck, truckID):
-        for package in truck.get_current_packages().get_path():
+    def deliver_packages(self, truck, truckID, lock):
+        packages = truck.get_current_packages().get_path()
+        for package in packages:
             package.setDeliveryStatus("En Route")
-        done = False
-        for package in truck.get_current_packages().get_path():
-            if not self.packsdelivered == 41:
-                # Get the time for the other truck
-                # If the time is less than the current time, then we need to wait until the other truck is done
-                if truckID == "1" and self.thread2.is_alive():
-                    truckTimeInt = self.parseTime(truck)
-                    truck2TimeInt = self.parseTime(self.trucks[1])
-                    while truckTimeInt > truck2TimeInt:
-                        truckTimeInt = self.parseTime(truck)
-                        truck2TimeInt = self.parseTime(self.trucks[1])
-                        # If the time for truck 1 is greater than the time for truck 2, then we need to wait until truck 1 is done
-                if truckID == "2" and self.thread1.is_alive():
-                # Here I have to parse the ints from the string and determine if the time is greater than the other truck
-                # If it is, then we need to wait until the other truck is done
-                    truckTimeInt = self.parseTime(truck)
-                    truck2TimeInt = self.parseTime(self.trucks[0])
-                    while truckTimeInt > truck2TimeInt:
-                        truckTimeInt = self.parseTime(truck)
-                        truck2TimeInt = self.parseTime(self.trucks[0])
-                package.timestamp = truck.time
-                if truckID == "1":
-                    print(
-                        f"Package {str(package.package_id)} Delivered at {str(truck.time)} on truck {str(truckID)} to {package.address}")
-                    print(f"Package ID: {str(package.package_id)}")
-                    print(f"Special Notes: {package.special_notes}")
-                    print(f"Deadline: {package.deadline}")
-                    if package.deadline != "EOD":
-                        deadline = self.parseTimeFromString(package.deadline)
-                        time = self.parseTimeFromString(truck.time)
-                        if deadline < time:
-                            print("Package was late")
-                    print(f"Packages delivered: {str(self.packsdelivered)}")
-                elif truckID == "2":
-                    print(
-                        f"Package {str(package.package_id)} Delivered at {str(truck.time)} on truck {str(truckID)} to {package.address}")
-                    print(f"Package ID: {str(package.package_id)}")
-                    print(f"Special Notes: {package.special_notes}")
-                    print(f"Deadline: {package.deadline}")
-                    if package.deadline != "EOD":
-                        deadline = self.parseTimeFromString(package.deadline)
-                        time = self.parseTimeFromString(truck.time)
-                        if deadline < time:
-                            print("Package was late")
-                    print(f"Packages delivered: {str(self.packsdelivered)}")
-                if truckID == "3":
-                    print(
-                        f"Package {str(package.package_id)} Delivered at {str(truck.time)} on truck {str(truckID)} to {package.address}")
-                    print(f"Package ID: {str(package.package_id)}")
-                    print(f"Special Notes: {package.special_notes}")
-                    print(f"Deadline: {package.deadline}")
-                    if package.deadline != "EOD":
-                        deadline = self.parseTimeFromString(package.deadline)
-                        time = self.parseTimeFromString(truck.time)
-                        if deadline < time:
-                            print("Package was late")
-                    print(f"Packages delivered: {str(self.packsdelivered)}")
-                package.delivery_status = "Delivered"
-                self.packsdelivered += 1
-                # Set current package to prev and set next package to current if there is another.
-                # After that increment the time with the difference
-                prev = package
-                if truck.get_current_packages().get_path().index(package) + 1 < len(
-                        truck.get_current_packages().get_path()):
-                    current = truck.get_current_packages().get_path()[
-                        truck.get_current_packages().get_path().index(package) + 1]
-                    truck = self.increment_time(prev, current, truck)
-                else:
-                    print(f"That's it for truck {truckID}\nPackages delivered: {str(self.packsdelivered)}")
-                    if truckID == "1":
-                        print("Reloading truck 1")
-                        self.trucks[3].time = truck.time
-                        self.trucks[0].current_packages = self.trucks[3].get_current_packages()
-                        self.deliver_packages(self.trucks[1], "1")
-                        continue
-                    break
-            else:
-                print("All done")
-                break
-    # To parse the ints for the format of HH:MM or H:MM I will use the following if statements
-    # This gives us the minute of the day for the time of the truck
-    # the way Ill do this is by determining the time in minutes
-    # 12:00 am aka 0:00 is 0 minutes
-    # 12:01 am aka 0:01 is 1 minute
-    def parseTime(self, truck):
-        minutes = 0
-        hours = int(truck.time.split(":")[0])
-        minutes_str = truck.time.split(":")[1]
-        if len(minutes_str) == 2:  # This will tell us that the format is HH:MM
-            minutes = int(minutes_str)
-            hours = hours * 60
-        elif len(minutes_str) == 1:  # This will tell us that the format is H:MM
-            minutes = int(minutes_str) * 10 + int(truck.time.split(":")[2])
-            hours = hours * 60
-        return hours + minutes
+        while len(packages) > 0:
+            for package in packages:
+                with lock:
+                    self.print_package_info(package, truck)
+                    package.delivery_status = "Delivered"
+                    package.timestamp = truck.time
+                    self.packsdelivered += 1
+                    # Check if next package is ready to be delivered
+                    index = packages.index(package)
+                    if index + 1 < len(packages):
+                        next_package = packages[index + 1]
+                        truck = self.increment_time(package, next_package, truck)
+                    else:
+                        # No more packages to deliver
+                        print(f"That's it for truck {truckID}\nPackages delivered: {str(self.packsdelivered)}")
+                        if truckID == "1" and not self.reloaded:
+                            truck = self.reload_truck(truck)
+                            self.thread1 = threading.Thread(target=self.deliver_packages, args=(truck, "1", lock))
+                            self.thread1.start()
+                            self.thread1.join()
+                        break
+    def print_package_info(self, package, truck):
+        delivery_time_str = truck.time.strftime("%I:%M %p")
+        print(f"Package {package.package_id} Delivered at {delivery_time_str} on truck {truck} to {package.address}")
+        print(f"Package ID: {package.package_id}")
+        if package.special_notes:
+            print(f"Special Notes: {package.special_notes}")
+        # if package.deadline != "EOD":
+        #     print(f"Deadline: {package.deadline}")
+        #     print(f"Package was delivered at {delivery_time_str} on {truck.time.strftime('%m/%d/%Y')}")
+        #
+        #     if self.parseTimeFromString(package.deadline) < package.timestamp:
+        #         print("Package was late")
 
-    def parseTimeFromString(self, time):
-        minutes = 0
-        hours = time[0]
-        if time[1] == ":":  # This will tell us that the format is H:MM
-            hours = int(time[0]) * 60
-            minutes = int(time[2]) * 10 + int(time[3])
-        elif time[2] == ":":  # This will tell us that the format is HH:MM
-            hours = int(time[0]) * 600 + int(time[1]) * 60
-            minutes = int(time[3]) * 10 + int(time[4])
-        return hours + minutes
+    def reload_truck(self, truck):
+        print("Reloading truck 1")
+        self.trucks[0].time = truck.time
+        self.trucks[0].current_packages = self.trucks[3].get_current_packages()
+        self.reloaded = True
 
-
-
-    #time is a string that we will be adding to.
-    #prev is the previous package that was delivered last
-    #current is the current package that is going to be delivered
-    #we need to add the time it takes to deliver the package to the time
     def increment_time(self, prev, current, truck):
-        ints = truck.time.split(":")
-        hour = int(ints[0])
-        minute = int(ints[1])
-        x = range(0, int(prev.get_distance(current)), 1)  # 18 mph
-        self.totalmiles += int(prev.get_distance(current))
-        for mile in x:
-            if x == 0:
-                continue
-            else:
-                minute += 6 # add 6 minutes since it takes 6 minutes to travel 1 mile at 18 mph
-                if minute >= 60:
-                    hour += 1
-                    minute -= 60
-                if hour > 12:
-                    hour -= 12
-        if minute >= 10:
-            truck.time = str(hour) + ":" + str(minute)
-            return truck
-        else :
-            truck.time = str(hour) + ":0" + str(minute)
-            return truck
+        speed = 18  # miles per hour
+        distance = prev.get_distance(current)
+        travel_time = timedelta(hours=distance/speed)
+        truck.time += travel_time
+        return truck
+
+    def parseTimeFromString(self, time_str):
+        datetime_obj = datetime.strptime(time_str, '%I:%M %p')
+        return datetime_obj.strftime('%H:%M')
+
+    def parseTime(self, time_str):
+        datetime_obj = datetime.strptime(time_str, '%I:%M %p')
+        return datetime_obj
 
 
 

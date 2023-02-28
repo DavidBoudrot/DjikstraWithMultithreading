@@ -76,12 +76,14 @@ def create_packages():
     packagesForTruck3 = []
 
     packagesForTruck1 = Djikstra.Djikstra(trucks[0])
-    truck1Obj = Truck.Truck(1, packagesForTruck1)
+    truck1Obj = Truck.Truck(1,'08:00', packagesForTruck1)
     packagesForTruck2 = Djikstra.Djikstra(trucks[1])
-    truck2Obj = Truck.Truck(2, packagesForTruck2)
+    truck2Obj = Truck.Truck(2,'09:05', packagesForTruck2)
     packagesForTruck3 = Djikstra.Djikstra(trucks[2])
-    truck3Obj = Truck.Truck(3, packagesForTruck3)
-    truck1ReloadObj = Truck.Truck(1, trucks[3])
+    truck3Obj = Truck.Truck(3,'9:05', packagesForTruck3)
+
+    packagesForTruck1Reload = Djikstra.Djikstra(trucks[3])
+    truck1ReloadObj = Truck.Truck(1,'9:05', packagesForTruck1Reload)
 
 
 

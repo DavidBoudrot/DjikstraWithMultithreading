@@ -1,4 +1,5 @@
 import csv
+import datetime
 
 from Djikstra import Djikstra
 
@@ -11,7 +12,7 @@ class Package:
     zip_code = ""
     deadline = ""
     weight = ""
-    timestamp = ""
+    timestamp = datetime.datetime.now()
     special_notes = ""
     delivery_status = ""
 
@@ -25,8 +26,6 @@ class Package:
         self.weight = weight
         self.special_notes = special_notes
         self.delivery_status = "At Hub"
-
-
     def __str__(self):
         return "Package ID: " + self.package_id + "\n" + "Address: " + self.address + "\n" + "City: " + self.city + "\n" + "State: " + self.state + "\n" + "Zip Code: " + self.zip_code + "\n" + "Deadline: " + self.deadline + "\n" + "Weight: " + self.weight + "\n" + "Special Notes: " + self.special_notes + "\n" + "Delivery Status: " + self.delivery_status + "\n"
 
