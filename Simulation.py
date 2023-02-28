@@ -3,18 +3,17 @@ import time as t
 
 import threading
 from datetime import timedelta, datetime, time
-
-
 class Simulation:
     all_packages = []
     totalmiles = 0
-    packsdelivered = 1
+    packsdelivered = 0
     trucks = []
     time = "8:00"
     thread1 = None
     thread2 = None
     thread3 = None
     reloaded = False
+    i = 0
     def __init__(self, trucks, all_packages):
         self.trucks = trucks
         self.totalmiles = 0
@@ -24,26 +23,21 @@ class Simulation:
     import multiprocessing
     def run_simulation(self):
         # Create a lock for synchronizing thread access
-        truck1 = self.trucks[0].current_packages
-        for package in truck1.get_path():
-            print(package.package_id)
-        truck2 = self.trucks[1].current_packages
-        for package in truck2.get_path():
-            print(package.package_id)
-        truck3 = self.trucks[2].current_packages
-        for package in truck3.get_path():
-            print(package.package_id)
-        truck4 = self.trucks[3].current_packages
-        for package in truck4.get_path():
-            print(package.package_id)
-
-        input("Press Enter to start the simulation")
-        truck1 = self.trucks[0].current_packages
-        truck2 = self.trucks[1].current_packages
-        self.trucks[1].time = "9:05"
-        truck3 = self.trucks[2].current_packages
         lock = threading.Lock()
-        # Start the delivery threads
+
+        packages = self.trucks[0].get_current_packages().get_path()
+        print(len(packages))
+        packages = self.trucks[1].get_current_packages().get_path()
+        print(len(packages))
+        packages = self.trucks[2].get_current_packages().get_path()
+        print(len(packages))
+        packages = self.trucks[3].get_current_packages().get_path()
+        print(len(packages))
+
+        # Wait for user input to start the simulation
+        input("Press Enter to start the simulation")
+
+        # Start the delivery threads for trucks 1 and 2
         self.thread1 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
         self.thread2 = threading.Thread(target=self.deliver_packages, args=(self.trucks[1], "2", lock))
         self.thread1.start()
@@ -53,21 +47,21 @@ class Simulation:
         self.thread1.join()
         self.thread2.join()
 
-        # Start the third delivery thread if necessary
-        while self.thread1.is_alive() and self.thread2.is_alive():
-            continue
+        # Reload truck 1 and start a new thread for it if necessary
+        if not self.reloaded:
+            print("Truck 1 has run out of packages. Reloading...")
+            self.reload_truck(self.trucks[0])
+            self.thread1 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
+            self.thread1.start()
+            self.thread1.join()
 
-        if self.thread1.is_alive():
-            print("thread 2 died")
-            self.trucks[2].time = self.trucks[1].time
-            self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
-        else:
-            print("thread 1 died")
-            self.trucks[2].time = self.trucks[0].time
-            self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
+        # Start a new thread for truck 3 if truck 1 is finished
+        print("Truck 1 has finished delivering all packages. Starting truck 3...")
+        self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
         self.thread3.start()
         self.thread3.join()
-        print("Simulation complete")
+
+
 
     #Once one of the threads is done I can start the next one
     # I'm going to use the threading module to run the simulation on two different threads
@@ -77,11 +71,15 @@ class Simulation:
     # Okay so here is the deliver_packages method that will run on two different threads.
     # It will deliver the packages for truck 1 and truck 2.
     def deliver_packages(self, truck, truckID, lock):
+        if truckID == "2":
+            truck2Started = True
         packages = truck.get_current_packages().get_path()
         for package in packages:
             package.setDeliveryStatus("En Route")
         while len(packages) > 0:
+            print(len(packages))
             for package in packages:
+
                 with lock:
                     self.print_package_info(package, truck)
                     package.delivery_status = "Delivered"
@@ -92,18 +90,16 @@ class Simulation:
                     if index + 1 < len(packages):
                         next_package = packages[index + 1]
                         truck = self.increment_time(package, next_package, truck)
+                    elif truck.truck_id == 1 and not self.reloaded:
+                        # Truck 1 is out of packages
+                        self.reload_truck(truck)
                     else:
                         # No more packages to deliver
                         print(f"That's it for truck {truckID}\nPackages delivered: {str(self.packsdelivered)}")
-                        if truckID == "1" and not self.reloaded:
-                            truck = self.reload_truck(truck)
-                            self.thread1 = threading.Thread(target=self.deliver_packages, args=(truck, "1", lock))
-                            self.thread1.start()
-                            self.thread1.join()
-                        break
+                        return
     def print_package_info(self, package, truck):
         delivery_time_str = truck.time.strftime("%I:%M %p")
-        print(f"Package {package.package_id} Delivered at {delivery_time_str} on truck {truck} to {package.address}")
+        print(f"Package {package.package_id} Delivered at {delivery_time_str} on truck {truck.truck_id} to {package.address}")
         print(f"Package ID: {package.package_id}")
         if package.special_notes:
             print(f"Special Notes: {package.special_notes}")

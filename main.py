@@ -19,7 +19,6 @@ def create_packages():
         #now I just have to order them in an efficient way that will allow me to deliver them all in the least amount of time
         #For my submission I will be creating a weighted graph that will use djiikstra's algorithm to find the shortest path between all the packages
         #Im gonna start by loading up the packages without any special notes
-
     truck1 = []
     truck2 = []
     truck3 = []
@@ -64,8 +63,6 @@ def create_packages():
                 truck1Reload.append(package)
             else:
                 truck3.append(package)
-
-
 
     # Now I will use Djikstra's algorithm to find the shortest path between all the packages
     # I have created a class that will do this for me
