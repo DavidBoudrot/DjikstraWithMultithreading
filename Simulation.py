@@ -8,24 +8,30 @@ class Simulation:
     totalmiles = 0
     packsdelivered = 0
     trucks = []
-    time = "8:00"
+    time = "8:00"   # Mutex that will be used to keep track of the time
+                    # Only one thread can access this at a time
+                    # The thread will say; Hey I'm going to access the time now
+                    # If a different thread is already accessing the time, it will wait until the other thread is done
+                    # If a thread is accessing the time and it wants to deliver a package that has a delivery time after
+                    # the current time, it will pass and give time access to another thread.
+
+
     thread1 = None
     thread2 = None
     thread3 = None
     thread4 = None
     reloaded = False
+    truck2Started = False
     i = 0
     def __init__(self, trucks, all_packages):
         self.trucks = trucks
         self.totalmiles = 0
         self.all_packages = all_packages
     #This is where the simulation will run
-    #I will need to loop through each each package in each truck
-    import multiprocessing
     def run_simulation(self):
         # Create a lock for synchronizing thread access
         lock = threading.Lock()
-
+        self.time = datetime.strptime("8:00", '%H:%M')
         packages = self.trucks[0].get_current_packages().get_path()
         print(len(packages))
         packages = self.trucks[1].get_current_packages().get_path()
@@ -37,64 +43,61 @@ class Simulation:
 
         # Wait for user input to start the simulation
         input("Press Enter to start the simulation")
-
         # Start the delivery threads for trucks 1 and 2
         self.thread1 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
         self.thread2 = threading.Thread(target=self.deliver_packages, args=(self.trucks[1], "2", lock))
+        self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
+        self.thread4 = threading.Thread(target=self.deliver_packages, args=(self.trucks[3], "4", lock))
+
+
         self.thread1.start()
         self.thread2.start()
-
-        # Wait for the threads to finish
-        self.thread1.join()
-        self.thread2.join()
-
-        # Reload truck 1 and start a new thread for it if necessary
-        if not self.reloaded:
-            print("Truck 1 has run out of packages. Reloading...")
-            self.reload_truck(self.trucks[0])
-            self.thread4 = threading.Thread(target=self.deliver_packages, args=(self.trucks[0], "1", lock))
-            self.thread4.start()
-            self.thread4.join()
-
-        # Start a new thread for truck 3 if truck 1 is finished
-        print("Truck 1 has finished delivering all packages. Starting truck 3...")
-        self.thread3 = threading.Thread(target=self.deliver_packages, args=(self.trucks[2], "3", lock))
         self.thread3.start()
+        self.thread4.start()
+
+
+        self.thread1.join()
         self.thread3.join()
-
-
-
-    #Once one of the threads is done I can start the next one
-    # I'm going to use the threading module to run the simulation on two different threads
-     # This is super overly complicated and chaotic but I wanted to embrace a challenge for the sake of learning.
-    # If I was not crazy I would have just looped through both truck 1 and truck 2 in the same method.
-
-    # Okay so here is the deliver_packages method that will run on two different threads.
-    # It will deliver the packages for truck 1 and truck 2.
+        self.thread2.join()
+        self.thread4.join()
     def deliver_packages(self, truck, truckID, lock):
+        if truckID == "3":
+            truck.time = self.time
         if truckID == "2":
-            truck2Started = True
+            self.truck2Started = True
+
+
+        while truck.time > self.time:
+            # self.time will be the time of the last delivery.
+            # If the current truck's time is greater than the last delivery time, it means that the truck will have to wait to deliver.
+
+            if not self.truck2Started:
+                print("Detected a freeze in threads due to only 1 thread running and waiting")
+                print("Force starting thread 2")
+                self.thread2.start()
+            continue
         packages = truck.get_current_packages().get_path()
+
+        # Setting the packages status to en route
         for package in packages:
             package.setDeliveryStatus("En Route")
-        while len(packages) > 0:
-            print(len(packages))
-            for package in packages:
 
-                with lock:
-                    self.print_package_info(package, truck)
-                    package.delivery_status = "Delivered"
-                    package.timestamp = truck.time
-                    self.packsdelivered += 1
-                    # Check if next package is ready to be delivered
-                    index = packages.index(package)
-                    if index + 1 < len(packages):
-                        next_package = packages[index + 1]
-                        truck = self.increment_time(package, next_package, truck)
-                    else:
-                        # No more packages to deliver
-                        print(f"That's it for truck {truckID}\nPackages delivered: {str(self.packsdelivered)}")
-                        return
+        # Delivering the packages
+        for i, package in enumerate(packages):
+            with lock:
+                self.print_package_info(package, truck)
+                package.delivery_status = "Delivered"
+                package.timestamp = truck.time
+                self.packsdelivered += 1
+                # Check if next package is ready to be delivered
+                if i + 1 < len(packages):
+                    # If there is another package to deliver increment the time
+                    next_package = packages[i + 1]
+                    truck = self.increment_time(package, next_package, truck)
+                else:
+                    # No more packages to deliver
+                    print(f"That's it for truck {truckID}\nPackages delivered: {str(self.packsdelivered)}")
+                    return
     def print_package_info(self, package, truck):
         delivery_time_str = truck.time.strftime("%I:%M %p")
         print(f"Package {package.package_id} Delivered at {delivery_time_str} on truck {truck.truck_id} to {package.address}")
@@ -119,6 +122,7 @@ class Simulation:
         distance = prev.get_distance(current)
         travel_time = timedelta(hours=distance/speed)
         truck.time += travel_time
+        self.time = truck.time
         return truck
 
     def parseTimeFromString(self, time_str):
